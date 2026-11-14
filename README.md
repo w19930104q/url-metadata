@@ -42,7 +42,7 @@ Fetch a URL and scrape its metadata using Node.js or the browser. Optional mode 
 
 ### **🔒 Security** - Protects against:
 - Infinite redirect loops: `maxRedirects` option defaults to 10.
-- SSRF attacks via [request-filtering-agent](https://www.npmjs.com/package/request-filtering-agent) in Node.js (custom options also available)
+- SSRF attacks via a built-in connect-time IP filter in Node.js (every redirect hop re-validated, DNS-rebinding safe; custom options also available)
 - Memory-exhaustion attacks (gzip bombs, oversized responses): set `size` option. Pair with `timeout` to prevent slow/ connection-holding responses.
 - Leaking sensitive headers (auth, cookies) if target URL redirects to a diff host.
 
@@ -114,15 +114,17 @@ const options = {
 
   // (Node.js only)
   // To prevent SSRF attacks, the default option blocks fetch
-  // requests to private network & reserved IP addresses via:
-  // https://www.npmjs.com/package/request-filtering-agent
+  // requests to private network & reserved IP addresses. Every
+  // redirect hop is re-validated at connect time.
+  // Options: allowPrivateIPAddress, allowMetaIPAddress,
+  //   allowIPAddressList, denyIPAddressList
   // Browser security policies prevent SSRF automatically.
   requestFilteringAgentOptions: undefined,
 
   // (Node.js only)
-  // Pass in your own custom `agent` to override the
-  // built-in request filtering agent above
-  // https://www.npmjs.com/package/node-fetch/v/2.7.0#custom-agent
+  // Pass in your own custom undici `Dispatcher` (or a function
+  // returning one) to override the built-in SSRF-filtering
+  // dispatcher above
   agent: undefined,
 
   // Maximum redirects in request chain, defaults to 10
@@ -140,8 +142,8 @@ const options = {
   // Default set to 0 disables max size:
   size: 0,
 
-  // (Node.js only) compression defaults to true
-  // Support gzip/deflate content encoding, set `false` to disable
+  // (Node.js only) responses are always decompressed per the fetch spec;
+  // set `false` to request an identity (uncompressed) encoding instead
   compress: true,
 
   // Force-rewrites favicon and img url strings returned to use https://,
@@ -366,13 +368,13 @@ partial.responseStatusCode; // number | undefined
 
 **⛔ Issue: ERR_REQUIRE_ESM.** You're on a Node.js version below 20.19 (or 22.0–22.11). Upgrade Node, or use url-metadata@5.12.0.
 
-**⛔ Issue: `No fetch implementation found`.** You're in either an older browser that doesn't have the native `fetch` API or a Node.js environment that doesn't support `node-fetch`. File a GitHub issue or try dowgrading to `url-metadata` version 5.12.0 for Node.js v18 support, or version 2.5.0 which uses the now-deprecated `request` module.
+**⛔ Issue: `No fetch implementation found`.** You're in an older browser that doesn't have the native `fetch` API. File a GitHub issue or try dowgrading to `url-metadata` version 5.12.0 for Node.js v18 support, or version 2.5.0 which uses the now-deprecated `request` module.
 
 **⛔ Issue: Proxy mode throws `unsupported content type` errors.** This is expected behavior when you use a proxy url or proxy params that produce anything other than HTML. See "Proxy Mode" section above.
 
 **⛔ Issue: Proxy mode with `render: true` param (headless browser rendering) throws `unsupported content type: text/x-component`.** Some JS-rendered sites (esp Next.js App Router sites) can return a React Server Component payload — a serialized component tree — instead of the rendered HTML page. This package can't parse that as HTML, so it throws instead of returning corrupted metadata. This is a quirk of the target site (and sometimes intermittent, tied to CDN/caching behavior), not something fixable from this package's side; retry or test without `render: true`. You may also try a different proxy.
 
-**⛔ Issue: `DNS Lookup` errors.** The SSRF filtering agent defaults on this package prevent calls to private ip addresses, link-local addresses and reserved ip addresses. To change or disable this feature you need to pass custom `requestFilteringAgentOptions`. More info [here](https://www.npmjs.com/package/request-filtering-agent).
+**⛔ Issue: `DNS Lookup` errors.** The SSRF filter defaults on this package prevent calls to private ip addresses, link-local addresses and reserved ip addresses. To change or disable this feature you need to pass custom `requestFilteringAgentOptions` (ex: `{ allowPrivateIPAddress: true }`).
 
 **⛔ Issue: `Response status code 0` or `CORS` errors.** The `fetch` request failed at either the network or protocol level. Possible causes:
 

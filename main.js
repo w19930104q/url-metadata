@@ -12,13 +12,13 @@ const now = (typeof performance !== 'undefined' && performance.now)
   : () => Date.now()
 
 // Credential-bearing headers dropped when a redirect hop changes host,
-// mirroring browsers & `node-fetch` >=2.6.7 (CVE-2022-0235 class)
+// mirroring browsers & undici (CVE-2022-0235 class)
 const sensitiveHeaders = ['authorization', 'www-authenticate', 'cookie', 'cookie2']
 
 // Releases the response body stream back to the connection pool without
 // reading it. Required whenever we resolve or reject at headers (network mode
 // or error) — otherwise the socket is held until timeout/GC. Covers
-// `node-fetch` (destroy), whatwg streams (cancel), and a text() fallback.
+// node-style streams (destroy), whatwg streams (cancel), and a text() fallback.
 function drainBody (response) {
   if (!response || !response.body) return
   if (typeof response.body.destroy === 'function') response.body.destroy()
@@ -27,7 +27,7 @@ function drainBody (response) {
 }
 
 // Redact any url pointing at the proxy vendor from an error's message and
-// stack. node-fetch's FetchError embeds the full request url (proxy endpoint +
+// stack. FetchError embeds the full request url (proxy endpoint +
 // query params, i.e. the api key) in both.
 function redactProxyUrl (error, proxyUrl) {
   let origin
@@ -159,9 +159,9 @@ module.exports = function (url, options, _fetch, useAgent) {
         method: 'GET',
         headers: requestHeaders,
         // If the user doesn't pass in their own agent:
-        // When agent is a function, `node-fetch` calls it with the parsed URL
-        // of the request it's about to make, and uses the return value as the
-        // agent for that request:
+        // When agent is a function, the fetch implementation calls it with
+        // the parsed URL of the request it's about to make, and uses the
+        // return value as the dispatcher for that request:
         agent: opts.agent || ((parsedURL) => useAgent(parsedURL.href, opts.requestFilteringAgentOptions)),
         cache: opts.cache,
         mode: opts.mode,
@@ -180,7 +180,7 @@ module.exports = function (url, options, _fetch, useAgent) {
       // --> Make the fetch request <--
       const response = await _fetch(fetchUrl, requestOpts)
 
-      // Perf: `node-fetch` resolves once response headers arrive (body is a stream),
+      // Perf: `fetch` resolves once response headers arrive (body is a stream),
       // so this is effectively time-to-first-byte for this hop
       const headersAt = now()
 

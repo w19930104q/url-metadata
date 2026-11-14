@@ -1,5 +1,12 @@
 # CHANGELOG
 
+7.0.0
+- replace `node-fetch` v2 + `request-filtering-agent` with an undici-based request stack (`lib/node-fetch-stack.js`); drops both dependencies, adds `undici` + `ipaddr.js`
+- SSRF protection is now a connect-time IP filter on the undici dispatcher: same `requestFilteringAgentOptions` names/defaults/messages, every redirect hop re-validated, and only validated IPs are ever dialed (DNS-rebinding safe)
+- contract preserved: `size` still caps the *decompressed* body mid-stream, `timeout` still bounds time-to-headers per hop, errors keep the node-fetch v2 `FetchError` shape (`type`, `code`, `errno`) and messages, and error `responseHeaders` semantics are unchanged
+- breaking: the `agent` option now takes an undici `Dispatcher` (or a function returning one), not an `http.Agent`
+- `compress: false` no longer disables decompression (undici always decompresses per the fetch spec); it now requests an identity encoding from the server instead
+
 6.3.1
 - bump `cheerio` dependency to v1.2.0
 - bump /example-nextjs `next` dependency to 16.4.5

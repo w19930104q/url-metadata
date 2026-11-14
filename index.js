@@ -1,23 +1,12 @@
-// In all versions of Node.js, use `node-fetch` module
-// with SSRF protection from `request-filtering-agent`.
-// We're using `node-fetch` bc Node.js's native `fetch` does
-// not support `request-filtering-agent` SSRF protection.
-const nodeFetch = require('node-fetch')
-const requestFilteringAgent = require('request-filtering-agent')
+// In Node.js, fetch via undici with SSRF protection from the filtering
+// dispatcher in `lib/node-fetch-stack` (connect-time IP validation,
+// DNS-rebinding safe). See that module for the preserved contract.
+const { fetch: nodeFetch, useAgent } = require('./lib/node-fetch-stack')
 const main = require('./main')
 const resolveFields = require('./lib/resolve-fields')
 
 module.exports = function (url, options) {
-  // Handle Next.js bundler converting CommonJS `node-fetch` to ES module structure
-  const _fetch = typeof nodeFetch === 'function' ? nodeFetch : nodeFetch.default
-  const useAgent = requestFilteringAgent.useAgent
-
-  // Ensure we have a working fetch
-  if (!_fetch) {
-    throw new Error('No fetch implementation found. Ensure node-fetch is installed.')
-  }
-
-  return main(url, options, _fetch, useAgent)
+  return main(url, options, nodeFetch, useAgent)
 }
 
 // Result-shaping helpers, exposed on the public surface so consumers can

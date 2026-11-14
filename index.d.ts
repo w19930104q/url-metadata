@@ -47,19 +47,29 @@ declare namespace urlMetadata {
 
   // end Helper Functions ---
 
+  // SSRF filter options (Node.js only). Same names/semantics as the
+  // `request-filtering-agent` package this package used before v7:
+  // the filter validates every resolved IP at connect time, per redirect hop.
+  interface RequestFilteringAgentOptions {
+    allowPrivateIPAddress?: boolean; // default false: block private/reserved IP ranges
+    allowMetaIPAddress?: boolean; // default false: block 0.0.0.0 / ::
+    allowIPAddressList?: string[]; // IPs or CIDRs to always allow (checked first)
+    denyIPAddressList?: string[]; // IPs or CIDRs to always deny (checked last)
+  }
+
   interface Options {
     requestHeaders?: Record<string, string>;
     proxyUrl?: string; // proxy/unblocking service endpoint (ex: https://api.scraperapi.com/); presence of this triggers proxy mode
     proxyParams?: ProxyParams;
-    parseResponseObject?: globalThis.Response | import('node-fetch').Response;
+    parseResponseObject?: globalThis.Response;
     fields?: string[]; // sparse fieldset: atomic keys, group names ('network'|'og'|'twitter'|'meta'), and/or 'meta:<name>' for page-specific tags; undefined returns full result
     omitEmpty?: boolean; // drop top-level empty fields (undefined, null, '', [], {}) for token efficiency; when true, result is typed Partial<KnownFields>
-    requestFilteringAgentOptions?: import('request-filtering-agent').RequestFilteringAgentOptions;
-    agent?: any; // Suggest: Node.js http.Agent | https.Agent
+    requestFilteringAgentOptions?: RequestFilteringAgentOptions;
+    agent?: import('undici').Dispatcher | ((parsedURL: URL) => import('undici').Dispatcher); // Node.js only; overrides the built-in SSRF-filtering dispatcher
     maxRedirects?: number;
     timeout?: number; // default 10000ms; auto-bumped to 60000ms in proxy mode unless explicitly set
-    size?: number;
-    compress?: boolean;
+    size?: number; // Node.js only: max DEcompressed response body bytes; 0 = unlimited
+    compress?: boolean; // Node.js only: false requests an identity (uncompressed) encoding
     ensureSecureImageRequest?: boolean;
     decode?: string;
     cache?: string;

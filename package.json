@@ -36,9 +36,7 @@
   },
   "main": "index.js",
   "browser": {
-    "./index.js": "./browser.js",
-    "node-fetch": false,
-    "request-filtering-agent": false
+    "./index.js": "./browser.js"
   },
   "exports": {
     "node": "./index.js",
@@ -67,7 +65,8 @@
     "globals": [
       "expect",
       "test",
-      "jest"
+      "jest",
+      "afterAll"
     ],
     "ignore": [
       "/example-typescript",
@@ -81,13 +80,12 @@
     "resetModules": true,
     "setupFiles": [
       "<rootDir>/test/setup-env.js"
-    ],
-    "transformIgnorePatterns": ["/node_modules/(?!request-filtering-agent/)"]
+    ]
   },
   "dependencies": {
     "cheerio": "^1.2.0",
-    "node-fetch": "^2.7.0",
-    "request-filtering-agent": "^3.2.1"
+    "ipaddr.js": "^2.5.0",
+    "undici": "^7.30.2"
   },
   "devDependencies": {
     "@babel/preset-env": "^7.29.7",
